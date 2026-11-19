@@ -1,11 +1,5 @@
 # 用户管理系统
 
-择栖工作室 2026 后端招新 · 第四题
-
-- 姓名：薛锦睿
-- 学号：2026090910002
-- 技术栈：Java 21 / Spring Boot 4.1.2 / Spring Data JPA / MySQL 8.4 / Maven
-
 ## 功能
 
 **必做**
@@ -50,7 +44,7 @@ CREATE TABLE users(
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-配置见 `src/main/resources/application.properties`，`ddl-auto=none`（表由 SQL 手动创建）。
+表是 SQL 手动创建的
 
 ## 启动
 
