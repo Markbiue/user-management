@@ -1,15 +1,15 @@
 # 用户管理系统
 
+择栖工作室 2026 后端招新 · 第四题
+
+- 姓名：薛锦睿
+- 学号：2026090910002
+
 ## 功能
 
-**必做**
-
-- 用户注册（密码 BCrypt 哈希存储）
+- 用户注册（密码加密后存储）
 - 用户登录，返回随机会话标识 `sessionId`
 - 查看当前登录用户（请求头携带 `sessionId`）
-
-**选做**
-
 - 查看用户列表
 - 修改用户名
 - 修改密码
@@ -17,23 +17,42 @@
 
 ## 接口
 
-| 功能 | 方法 | URL | 认证 | 成功 |
+| 功能 | 方法 | 地址 | 需要登录 | 成功状态码 |
 |---|---|---|---|---|
-| 注册 | POST | `/api/users` | 无 | 201 |
-| 登录 | POST | `/api/sessions` | 无 | 200 |
-| 当前用户 | GET | `/api/users/me` | sessionId | 200 |
-| 用户列表 | GET | `/api/users` | sessionId | 200 |
-| 修改用户名 | PATCH | `/api/users/me` | sessionId | 200 |
-| 修改密码 | PUT | `/api/users/me/password` | sessionId | 200 |
-| 注销 | DELETE | `/api/users/me` | sessionId | 204 |
+| 注册 | POST | `/api/users` | 否 | 201 |
+| 登录 | POST | `/api/sessions` | 否 | 200 |
+| 当前用户 | GET | `/api/users/me` | 是 | 200 |
+| 用户列表 | GET | `/api/users` | 是 | 200 |
+| 修改用户名 | PATCH | `/api/users/me` | 是 | 200 |
+| 修改密码 | PUT | `/api/users/me/password` | 是 | 200 |
+| 注销 | DELETE | `/api/users/me` | 是 | 204 |
 
-错误码：400 参数错误 / 401 未登录或 sessionId 失效 / 404 用户不存在 / 409 用户名已存在。
+错误状态码：
 
-## 数据库
+- 400：用户名或密码为空、原密码错误
+- 401：未登录、sessionId 无效
+- 404：用户不存在
+- 409：用户名已存在
 
-库 `db002`，表 `users`：
+请求示例：
+
+```http
+POST /api/users
+Content-Type: application/json
+
+{"username":"alice","password":"pass123","email":"alice@test.com"}
+```
+
+## 怎么运行
+
+1. 安装 JDK 21 和 MySQL 8，启动 MySQL
+2. 建库并建表（可以用 Navicat 或命令行执行）：
 
 ```sql
+CREATE DATABASE db002 DEFAULT CHARACTER SET utf8mb4;
+
+USE db002;
+
 CREATE TABLE users(
     user_id VARCHAR(64) PRIMARY KEY,
     user_name VARCHAR(50) NOT NULL,
@@ -44,28 +63,25 @@ CREATE TABLE users(
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-表是 SQL 手动创建的
-
-## 启动
+3. 修改 `src/main/resources/application.properties` 里的数据库账号和密码
+4. 在项目目录执行：
 
 ```bash
-# 1. 确认 MySQL 已启动，库 db002 存在
-# 2. 启动
 mvn spring-boot:run
 ```
 
-看到以下日志即成功：
+5. 看到下面这行就说明启动成功：
 
 ```
-HikariPool-1 - Start completed.
 Tomcat started on port 8080
 ```
 
-## 设计说明
+## 说明
 
-- **登录态**：登录成功后生成 UUID 作为 `sessionId`，服务端用 `Map` 保存 `sessionId → userId`；需要登录的接口从请求头读取并校验，查不到返回 401。
-- **密码**：`BCryptPasswordEncoder` 哈希存储，数据库中是 `$2a$10$...`，登录用 `matches()` 校验。
-- **限制**：session 存在内存中，服务重启后失效；多实例部署需改为 Redis。
+- 登录成功后，服务端生成一个随机的 `sessionId`，并用一个 `Map` 保存 `sessionId` 和 `userId` 的对应关系
+- 需要登录的接口从请求头读取 `sessionId`，查不到就返回 401
+- `sessionId` 存在内存里，服务重启后失效，需要重新登录
+- 密码用 BCrypt 加密后存进数据库，登录时用 `matches()` 比对，数据库里看不到明文
 
 ## 测试截图
 
