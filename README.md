@@ -38,10 +38,10 @@ Content-Type: application/json
 {"username":"alice","password":"pass123","email":"alice@test.com"}
 ```
 
-## 怎么运行
+## 运行
 
 1. 安装 JDK 21 和 MySQL 8，启动 MySQL
-2. 建库并建表（可以用 Navicat 或命令行执行）：
+2. 建库并建表（我直接在MySQL中创建的）：
 
 ```sql
 CREATE DATABASE db002 DEFAULT CHARACTER SET utf8mb4;
@@ -65,7 +65,7 @@ CREATE TABLE users(
 mvn spring-boot:run
 ```
 
-5. 看到下面这行就说明启动成功：
+5. 看到tomcat在8008端口监听：
 
 ```
 Tomcat started on port 8080
