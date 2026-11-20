@@ -2,12 +2,16 @@ package com.zeqi.usermanagement.controller;
 
 import com.zeqi.usermanagement.entity.User;
 import com.zeqi.usermanagement.repository.UserRepository;
+import com.zeqi.usermanagement.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.UUID;
@@ -22,6 +26,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final Map<String, String> sessions = new ConcurrentHashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     public AuthController(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -50,6 +55,7 @@ public class AuthController {
         user.setPasswordHash(encoder.encode(password));
         user.setEmail(email);
         userRepository.save(user);
+        log.info("用户注册成功 userId={} username={}", user.getUserId(), username);
 
         return ResponseEntity.status(201).body(Map.of(
                 "id", user.getUserId(),
@@ -57,14 +63,21 @@ public class AuthController {
         ));
     }
 
-    private User currentUser(String sessionId) {
-        if (sessionId == null) {
-            return null;
+    private User currentUser(HttpServletRequest request) {
+        // 为了不破坏第四题的接口，采用先验证jwt，再验证sessionId的方法
+
+        String userId = (String)request.getAttribute("userId");
+        // 没有 Authorization，没拿到Id
+        if (userId == null) {
+            String sessionId = request.getHeader("sessionId");
+            if(sessionId != null) {
+                userId = sessions.get(sessionId);
+            }
         }
-        String userId = sessions.get(sessionId);
         if (userId == null) {
             return null;
         }
+
         return userRepository.findById(userId).orElse(null);
     }
 
@@ -76,31 +89,27 @@ public class AuthController {
         User user = userRepository.findByUserName(username);
 
         if (user == null || !encoder.matches(password, user.getPasswordHash())) {
+            log.warn("用户登录失败 username={}", username);
             return ResponseEntity.status(401).body(Map.of("message", "用户名或密码错误"));
         }
 
         String sessionId = UUID.randomUUID().toString().replace("-", "");
         sessions.put(sessionId, user.getUserId());
+        log.info("用户登录成功 userId={} username={}", user.getUserId(), username);
 
         return ResponseEntity.ok(Map.of(
                 "sessionId", sessionId,
+                "token", JwtUtil.generateToken(user.getUserId()),
                 "username", user.getUserName()
         ));
     }
 
     @GetMapping("/users/me")
-    public ResponseEntity<?> me(
-            @RequestHeader(value = "sessionId", required = false) String sessionId) {
+    public ResponseEntity<?> me(HttpServletRequest request) {
 
-        String userId = (sessionId == null) ? null : sessions.get(sessionId);
-
-        if (userId == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
-        }
-
-        User user = userRepository.findById(userId).orElse(null);
+        User user = currentUser(request);
         if (user == null) {
-            return ResponseEntity.status(404).body(Map.of("message", "用户不存在"));
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
         }
 
         return ResponseEntity.ok(Map.of(
@@ -111,10 +120,9 @@ public class AuthController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<?> list(
-            @RequestHeader(value = "sessionId", required = false) String sessionId) {
+    public ResponseEntity<?> list(HttpServletRequest request) {
 
-        if (currentUser(sessionId) == null) {
+        if (currentUser(request) == null) {
             return ResponseEntity.status(401).body(Map.of("message", "未登录"));
         }
 
@@ -131,10 +139,10 @@ public class AuthController {
 
     @PatchMapping("/users/me")
     public ResponseEntity<?> rename(
-            @RequestHeader(value = "sessionId", required = false) String sessionId,
+            HttpServletRequest request,
             @RequestBody Map<String, String> body) {
 
-        User user = currentUser(sessionId);
+        User user = currentUser(request);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("message", "未登录"));
         }
@@ -149,16 +157,17 @@ public class AuthController {
 
         user.setUserName(newName);
         userRepository.save(user);
+        log.info("修改用户名成功 userId={} userName={}",user.getUserId(), user.getUserName());
 
         return ResponseEntity.ok(Map.of("id", user.getUserId(), "username", user.getUserName()));
     }
 
     @PutMapping("/users/me/password")
     public ResponseEntity<?> changePassword(
-            @RequestHeader(value = "sessionId", required = false) String sessionId,
+            HttpServletRequest request,
             @RequestBody Map<String, String> body) {
 
-        User user = currentUser(sessionId);
+        User user = currentUser(request);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("message", "未登录"));
         }
@@ -175,21 +184,27 @@ public class AuthController {
 
         user.setPasswordHash(encoder.encode(newPassword));
         userRepository.save(user);
+        log.info("修改密码成功 userId={}", user.getUserId());
 
         return ResponseEntity.ok(Map.of("message", "密码修改成功"));
     }
 
     @DeleteMapping("/users/me")
     public ResponseEntity<?> delete(
-            @RequestHeader(value = "sessionId", required = false) String sessionId) {
+            HttpServletRequest request) {
 
-        User user = currentUser(sessionId);
+        User user = currentUser(request);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("message", "未登录"));
         }
 
         userRepository.deleteById(user.getUserId());
-        sessions.remove(sessionId);
+
+        String sessionId = request.getHeader("sessionId");
+        if (sessionId != null) {
+            sessions.remove(sessionId);
+        }
+        log.info("用户注销 userId={}", user.getUserId());
 
         return ResponseEntity.noContent().build();
     }
