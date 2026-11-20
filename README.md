@@ -78,18 +78,6 @@ Tomcat started on port 8080
 - `sessionId` 存在内存里，服务重启后失效，需要重新登录
 - 密码用 BCrypt 加密后存进数据库，登录时用 `matches()` 比对，数据库里看不到明文
 
-## 测试截图
+## 接口测试
 
-见 `docs/screenshots/`：
-
-| 文件 | 内容 |
-|---|---|
-| 01-register-201.png | 注册成功 201 |
-| 02-duplicate-409.png | 重复注册 409 |
-| 03-login-200.png | 登录成功 200 |
-| 04-me-200.png | 当前用户 200 |
-| 05-unauthorized-401.png | 未登录 401 |
-| 06-list-200.png | 用户列表 200 |
-| 07-rename-200.png | 修改用户名 200 |
-| 08-password-200.png | 修改密码 200 |
-| 09-delete-204.png | 注销 204 |
+使用 Postman 测试全部接口，测试结果截图见提交的 PDF 文件
