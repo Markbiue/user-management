@@ -12,10 +12,10 @@ import java.util.Date;
 //生成 JWT Token
 public class JwtUtil {
 
-    // 生成密匙
+    // 生成密钥
     private static final String SECRET = "zeqi-user-management-secret-key-2026";
 
-    // 将密匙转化成 key
+    // 将密钥转化成 key
     private static final SecretKey KEY =
             Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
@@ -33,7 +33,7 @@ public class JwtUtil {
                 .issuedAt(now)
                 // 过期时间
                 .expiration(new Date(now.getTime() + EXPIRATION_TIME))
-                // Signature :密匙签名
+                // Signature :密钥签名
                 .signWith(KEY)
                 // 拼成字符串
                 .compact();

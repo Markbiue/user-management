@@ -7,16 +7,7 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
-/**
- * 对应 db002.users 表。
- *
- * user_id        VARCHAR(64)   主键
- * user_name      VARCHAR(50)   用户名
- * password_hash  VARCHAR(255)  密码哈希
- * email          VARCHAR(255)  邮箱
- * created_at     TIMESTAMP     数据库默认值
- * updated_at     TIMESTAMP     数据库自动更新
- */
+// 对应 db002.users 表
 @Entity
 @Table(name = "users")
 public class User {

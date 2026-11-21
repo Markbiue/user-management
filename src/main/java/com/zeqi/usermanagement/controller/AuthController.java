@@ -64,7 +64,7 @@ public class AuthController {
     }
 
     private User currentUser(HttpServletRequest request) {
-        // 为了不破坏第四题的接口，采用先验证jwt，再验证sessionId的方法
+        // 优先使用 JWT，没有则回退到 sessionId
 
         String userId = (String)request.getAttribute("userId");
         // 没有 Authorization，没拿到Id
