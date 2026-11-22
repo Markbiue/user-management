@@ -151,7 +151,8 @@ public class AuthController {
         if (newName == null || newName.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "新用户名不能为空"));
         }
-        if (userRepository.existsByUserName(newName)) {
+        if (!newName.equals(user.getUserName())
+                && userRepository.existsByUserName(newName)) {
             return ResponseEntity.status(409).body(Map.of("message", "用户名已存在"));
         }
 
