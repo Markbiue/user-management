@@ -22,14 +22,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 public class AuthController {
-
-    private final UserRepository userRepository;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    
     private final Map<String, String> sessions = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder encoder;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(UserRepository userRepository, BCryptPasswordEncoder encoder) {
         this.userRepository = userRepository;
+        this.encoder = encoder;
     }
 
     @PostMapping("/users")
