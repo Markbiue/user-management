@@ -28,13 +28,15 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder;
+    private final JwtUtil jwtUtil;
 
     /** 第四题的登录态：sessionId -> userId */
     private final Map<String, String> sessions = new ConcurrentHashMap<>();
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder encoder) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder encoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.encoder = encoder;
+        this.jwtUtil = jwtUtil;
     }
 
     /** 注册，用户名已存在时返回空 */
@@ -74,7 +76,7 @@ public class UserService {
         sessions.put(sessionId, user.getUserId());
 
         log.info("用户登录成功 userId={} username={}", user.getUserId(), user.getUserName());
-        return Optional.of(new LoginResult(sessionId, JwtUtil.generateToken(user.getUserId()), user.getUserName()));
+        return Optional.of(new LoginResult(sessionId, jwtUtil.generateToken(user.getUserId()), user.getUserName()));
     }
 
     /** 按 JWT 或 sessionId 取当前用户，未登录返回空 */
