@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 只负责接收请求、调用 Service、组装响应
@@ -38,7 +39,12 @@ public class AuthController {
 
     @PostMapping("/users")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        User user = userService.register(request);
+        Optional<User> created = userService.register(request);
+        if (created.isEmpty()) {
+            return ResponseEntity.status(409).body(Map.of("message", "用户名已存在"));
+        }
+
+        User user = created.get();
         return ResponseEntity.status(201).body(Map.of(
                 "id", user.getUserId(),
                 "username", user.getUserName()
@@ -47,7 +53,12 @@ public class AuthController {
 
     @PostMapping("/sessions")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        LoginResult result = userService.login(request);
+        Optional<LoginResult> login = userService.login(request);
+        if (login.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "用户名或密码错误"));
+        }
+
+        LoginResult result = login.get();
         return ResponseEntity.ok(Map.of(
                 "sessionId", result.getSessionId(),
                 "token", result.getToken(),
@@ -57,7 +68,12 @@ public class AuthController {
 
     @GetMapping("/users/me")
     public ResponseEntity<?> me(HttpServletRequest request) {
-        User user = userService.requireUser(jwtUserId(request), sessionId(request));
+        Optional<User> current = userService.currentUser(jwtUserId(request), sessionId(request));
+        if (current.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
+        }
+
+        User user = current.get();
         return ResponseEntity.ok(Map.of(
                 "id", user.getUserId(),
                 "username", user.getUserName(),
@@ -67,10 +83,13 @@ public class AuthController {
 
     @GetMapping("/users")
     public ResponseEntity<?> list(HttpServletRequest request) {
-        List<User> users = userService.listUsers(jwtUserId(request), sessionId(request));
+        Optional<User> current = userService.currentUser(jwtUserId(request), sessionId(request));
+        if (current.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
+        }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (User user : users) {
+        for (User user : userService.findAll()) {
             result.add(Map.of(
                     "id", user.getUserId(),
                     "username", user.getUserName(),
@@ -83,7 +102,17 @@ public class AuthController {
     @PatchMapping("/users/me")
     public ResponseEntity<?> rename(HttpServletRequest request,
                                     @Valid @RequestBody RenameRequest body) {
-        User user = userService.rename(jwtUserId(request), sessionId(request), body);
+        Optional<User> current = userService.currentUser(jwtUserId(request), sessionId(request));
+        if (current.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
+        }
+
+        Optional<User> renamed = userService.rename(current.get(), body);
+        if (renamed.isEmpty()) {
+            return ResponseEntity.status(409).body(Map.of("message", "用户名已存在"));
+        }
+
+        User user = renamed.get();
         return ResponseEntity.ok(Map.of(
                 "id", user.getUserId(),
                 "username", user.getUserName()
@@ -93,13 +122,27 @@ public class AuthController {
     @PutMapping("/users/me/password")
     public ResponseEntity<?> changePassword(HttpServletRequest request,
                                             @Valid @RequestBody PasswordRequest body) {
-        userService.changePassword(jwtUserId(request), sessionId(request), body);
+        Optional<User> current = userService.currentUser(jwtUserId(request), sessionId(request));
+        if (current.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
+        }
+
+        boolean changed = userService.changePassword(current.get(), body);
+        if (!changed) {
+            return ResponseEntity.badRequest().body(Map.of("message", "原密码错误"));
+        }
+
         return ResponseEntity.ok(Map.of("message", "密码修改成功"));
     }
 
     @DeleteMapping("/users/me")
     public ResponseEntity<?> delete(HttpServletRequest request) {
-        userService.delete(jwtUserId(request), sessionId(request));
+        Optional<User> current = userService.currentUser(jwtUserId(request), sessionId(request));
+        if (current.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "未登录"));
+        }
+
+        userService.delete(current.get(), sessionId(request));
         return ResponseEntity.noContent().build();
     }
 
